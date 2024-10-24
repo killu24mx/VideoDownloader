@@ -17,5 +17,13 @@ const Resolution Resolution::FromString(const std::string &rstr)
     return Resolution(w,h);
 }
 
-Resolution::Resolution(const std::pair<uint16_t, uint16_t> res) : res(res) {}
-Resolution::Resolution(uint16_t w, uint16_t h)  : Resolution(std::pair<uint16_t, uint16_t>(w,h)) {}
+Resolution::Resolution(const std::pair<uint16_t, uint16_t> res) : res(res) {}\
+
+
+Resolution::Resolution(uint16_t w, uint16_t h) : Resolution(std::pair<uint16_t, uint16_t>(w, h)) {}
+
+
+std::string Resolution::ToString() const
+{
+    return std::to_string(res.first) + "x" + std::to_string(res.second);
+}

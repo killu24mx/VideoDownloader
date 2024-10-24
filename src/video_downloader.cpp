@@ -1,23 +1,14 @@
 #include "../include/video_downloader.h"
 #include "video_downloader.h"
 
-std::shared_ptr<std::ofstream> open_file(const std::string& path){
-    std::shared_ptr<std::ofstream> pFile(new std::ofstream(),[](std::ofstream* pfile){
-        pfile->close();
-        delete pfile;
-    });
-
-    pFile->open(path);
-    if(!pFile->is_open()){
-        return nullptr;
-    }
-    return pFile;
-}
 
 bool VideoDownLoader::LoadFromURL(const std::string &Url,const std::string file_path,const Resolution& resolution)
 {
-    auto pFile = open_file(file_path);
-    if(!pFile){
+
+    std::ofstream file;
+    file.open(file_path);
+
+    if(!file.is_open()){
         return false;
     }
     VideoInfo videoinfo;
@@ -35,7 +26,7 @@ bool VideoDownLoader::LoadFromURL(const std::string &Url,const std::string file_
         return false;
     }
 
-    if(!DownloadAllSegments(pFile,sl)){
+    if(!DownloadAllSegments(file,sl)){
         return false;
     }
    
@@ -44,11 +35,88 @@ bool VideoDownLoader::LoadFromURL(const std::string &Url,const std::string file_
 
 void VideoDownLoader::Interface()
 {
+    std::cout << "input video url: " << "\n";
+
+    std::string url;
+    getline(std::cin,url);
+
+    VideoInfo videoinfo;
+
+    if(!videoinfo.LoadFromURL(url)){
+        std::cout << "Error loading video information!\n";
+        return;
+    }
+
+    M3U8ListInfo m3u8listinfo;
+    if(!m3u8listinfo.LoadFromURL(videoinfo.GetM3U8ListUrl())){
+        std::cout << "Error loading video information!\n";
+        return;
+    }
+
+    std::cout << "\nInformation loaded:\n";
+    std::cout << "Title:\t" << videoinfo.GetTitle() << "\n";
+    std::cout << "Available resolutions:\n";
+
+    auto m3u8list = m3u8listinfo.getM3U8List();
+
+    for (size_t i = 0; i < m3u8list.size(); i++){
+        std::cout << std::to_string(i + 1) << ".\t" << m3u8list[i].resolution.ToString() << "\n";
+    }
+
+    std::cout << "\nSelect number of resolution: ";
+
+
+    int number = 0;
+    std::cin >> number;
+    std::cout << "\n";
+
+    while(number <= 0 || number > m3u8list.size()){
+        std::cout << "Incorrect number!\n";
+        std::cout << "\nSelect number of resolution: ";
+        std::cin >> number;
+        std::cout << "\n";
+    }
+
+    Resolution resolution = m3u8list[number - 1].resolution;
+
+    std::cout << "Resolution: " << resolution.ToString() << " Downloading startded!\n\n";
+
+
+
+    std::string path = videoinfo.GetTitle() + ".ts";
+
+    std::ofstream file;
+
+    file.open(path,std::ios::binary);
+
+    if(!file.is_open()){
+        file.open("video.ts",std::ios::binary);
+        if(!file.is_open()){
+            std::cout << "Error loading video!\n";
+            return;
+        }
+    }
+
     
+
+
+    SegmentList sl;
+    if(!sl.LoadFromURL(m3u8listinfo.GetSLUrlFromResolution(resolution))){
+        std::cout << "Error loading segment list!\n";
+        return;
+    }
+
+
+    if(!DownloadAllSegments(file,sl)){
+        std::cout << "Error loading segment list!\n";
+        return;
+    }
+    std::cout << "\nSuccessfully!\n";
+
 
 }
 
-bool VideoDownLoader::DownloadAllSegments(std::shared_ptr<std::ofstream> pFile, const SegmentList &sl)
+bool VideoDownLoader::DownloadAllSegments(std::ofstream& file, const SegmentList &sl)
 {
     auto& vec_of_segmnts = sl.GetListOfSegments();
     size_t progress = 0;
@@ -61,9 +129,9 @@ bool VideoDownLoader::DownloadAllSegments(std::shared_ptr<std::ofstream> pFile, 
         std::string data = sender.StringData();
         if(!data.size()) return false;
 
-        pFile->write(data.c_str(),data.size());
+        file.write(data.c_str(),data.size());
         progress++;
-        std::cout << "progrress: " << static_cast<double>(progress)/static_cast<double>(vec_of_segmnts.size()) * 100 << std::endl;
+        std::cout << "progrress: " << static_cast<double>(progress)/static_cast<double>(vec_of_segmnts.size()) * 100 << "\n";
     }
     return true;
 }

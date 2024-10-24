@@ -21,7 +21,7 @@ public:
     static void Interface();
     
 private:
-    static bool DownloadAllSegments(std::shared_ptr<std::ofstream> pFile,const SegmentList& sl);
+    static bool DownloadAllSegments(std::ofstream& pFile,const SegmentList& sl);
 
 
 };
