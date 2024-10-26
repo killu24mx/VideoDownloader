@@ -1,4 +1,3 @@
-#include "../include/video_downloader.h"
 #include "video_downloader.h"
 
 
@@ -79,23 +78,31 @@ void VideoDownLoader::Interface()
 
     Resolution resolution = m3u8list[number - 1].resolution;
 
-    std::cout << "Resolution: " << resolution.ToString() << " Downloading startded!\n\n";
+
+    char digit;
+    bool _convert_to_mp4 = false;
+
+    std::cout << "Convert to mp4? (y/n)\n";
+    std::cin >> digit;
+
+    if(tolower(digit) == 'y')
+        _convert_to_mp4 = true;
+
+    std::cout << "\nResolution: " << resolution.ToString() << " Downloading startded!\n\n";
 
 
 
-    std::string path = videoinfo.GetTitle() + ".ts";
+    std::string path = "video.ts";
 
     std::ofstream file;
 
     file.open(path,std::ios::binary);
 
     if(!file.is_open()){
-        file.open("video.ts",std::ios::binary);
-        if(!file.is_open()){
-            std::cout << "Error loading video!\n";
-            return;
-        }
+        std::cout << "Error loading video!\n";
+        return;
     }
+    
 
     
 
@@ -111,9 +118,41 @@ void VideoDownLoader::Interface()
         std::cout << "Error loading segment list!\n";
         return;
     }
-    std::cout << "\nSuccessfully!\n";
+
+    if(_convert_to_mp4){
+        std::cout << "Convertion to mp4....\n";
+
+        if(!convert_ts_to_mp4(path)){
+            std::cout << "error convertion\n";
+            return;
+        }
+        std::filesystem::remove(path);
+        std::cout << "complete!\n";
+
+        std::filesystem::rename("video.mp4", videoinfo.GetTitle() + ".mp4");
+    }
 
 
+    else{
+        std::filesystem::rename("video.ts", videoinfo.GetTitle() + ".mp4");
+    }
+    
+    std::cout << "Finished!\n";
+
+}
+
+bool VideoDownLoader::convert_ts_to_mp4(const std::string& ts_path)
+{
+    std::stringstream comand_stream;
+    std::string mp4_path = ts_path;
+    mp4_path.replace(ts_path.find(".ts"),4,".mp4");
+
+    comand_stream << "ffmpeg -i " << ts_path << " " << mp4_path << " >nul 2>&1";
+    
+
+    std::string command = comand_stream.str();
+    std::cout << "command: " << command << "\n";
+    return !system(command.c_str());
 }
 
 bool VideoDownLoader::DownloadAllSegments(std::ofstream& file, const SegmentList &sl)
